@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="shortcut icon" type="image/png" href="images/icon.png" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins:400,500,600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+    <title>Bankist</title>
+  </head>
+  <body>
+    <header>
+      <p class="welcome">Log in to get started</p>
+      <img src="images/logo.png" alt="Logo" class="logo" />
+      <form class="login">
+        <input type="text" placeholder="user" class="login-input login-user" />
+        <input
+          type="password"
+          placeholder="PIN"
+          maxlength="4"
+          class="login-input login-pin"
+        />
+        <button class="login-btn">&rarr;</button>
+      </form>
+    </header>
+    <main class="app">
+      <!---BALANCE--->
+      <div class="balance">
+        <div>
+          <p class="balance-label">Current balance</p>
+          <p class="balance-date">As of <span class="date">24/04/2024</span></p>
+        </div>
+        <p class="balance-amount">0000€</p>
+      </div>
+
+      <!---MOVEMENT--->
+      <div class="movement">
+        <div class="movement-row">
+          <div class="movement-type movement-type-deposit">2 DEPOSIT</div>
+          <div class="movement-date">3 DAYS AGO</div>
+          <div class="movement-amount">4 000€</div>
+        </div>
+        <div class="movement-row">
+          <div class="movement-type movement-type-withdraw">1 WITHDRAWAL</div>
+          <div class="movement-date">24/01/2037</div>
+          <div class="movement-amount">-4 000€</div>
+        </div>
+      </div>
+
+      <!---SUMMARY--->
+      <div class="summary">
+        <p class="summary-label">IN</p>
+        <p class="summary-value summary-value-in">0000€</p>
+        <p class="summary-label">OUT</p>
+        <p class="summary-value summary-value-out">0000€</p>
+        <p class="summary-label">INTEREST</p>
+        <p class="summary-value summary-value-interest">0000€</p>
+        <button class="btn-sort">&downarrow; SORT</button>
+      </div>
+
+      <!---OPERATION:TRANSFER--->
+      <div class="operation operation-transfer">
+        <h2>Transfer money</h2>
+        <form class="form form-transfer">
+          <input type="text" class="form-input form-input-to" />
+          <input type="number" class="form-input form-input-amount" />
+          <button class="form-btn form-btn-transfer">&rarr;</button>
+          <label class="form-label">Transfer to</label>
+          <label class="form-label">Amount</label>
+        </form>
+      </div>
+
+      <!---OPERATION:LOAN--->
+      <div class="operation operation-loan">
+        <h2>Request loan</h2>
+        <form class="form form-loan">
+          <input type="number" class="form-input form-input-loan-amount" />
+          <button class="form-btn form-btn-loan">&rarr;</button>
+          <label class="form-label form-label-loan">Amount</label>
+        </form>
+      </div>
+
+      <!---OPERATION:CLOSE--->
+      <div class="operation operation-close">
+        <h2>Close account</h2>
+        <form class="form form-close">
+          <input type="text" class="form-input form-input-user" />
+          <input
+            type="password"
+            maxlength="6"
+            class="form-input form-input-pin"
+          />
+          <button class="form-btn form-btn-close">&rarr;</button>
+          <label class="form-label">Confirm user</label>
+          <label class="form-label">Confirm PIN</label>
+        </form>
+      </div>
+
+      <!---LOGOUT TIMER--->
+      <p class="logout-timer">
+        You will be logged out in <span class="timer">10:00</span>
+      </p>
+    </main>
+  </body>
+</html>
