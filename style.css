@@ -85,7 +85,7 @@ header {
   margin: 4rem auto;
   grid-template-rows: auto repeat(3, 15rem) auto;
   gap: 2rem;
-  opacity: 1;
+  opacity: 0;
   transition: all 1s;
 }
 

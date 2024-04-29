@@ -6,6 +6,8 @@ const account1 = {
   movements: [700, 1500, -1000, 225, -50, 900],
   interestRate: 1.2, // %
   pin: 1111,
+  currency: 'ILS',
+  balance: 10000,
 };
 
 const account2 = {
@@ -13,6 +15,8 @@ const account2 = {
   movements: [2000, 2500, -1100, -120, 400, -500, 1000, -800],
   interestRate: 1.5, // %
   pin: 2222,
+  currency: 'ILS',
+  balance: 5500,
 };
 
 const account3 = {
@@ -20,6 +24,8 @@ const account3 = {
   movements: [7000, -5000, 500, -153, -12, -70, -900, -1500, 2000],
   interestRate: 1.1, // %
   pin: 3333,
+  currency: 'USD',
+  balance: 2000,
 };
 
 const account4 = {
@@ -27,6 +33,8 @@ const account4 = {
   movements: [1000, 1500, 1000, -2000, 4000, -2000],
   interestRate: 1.6, // %
   pin: 4444,
+  currency: 'EUR',
+  balance: 7000,
 };
 
 const accounts = [account1, account2, account3, account4];
@@ -63,3 +71,133 @@ const currencies = new Map([
   ['USD', 'United States dollar'],
   ['EUR', 'Euro'],
 ]);
+
+let currUser = account1;
+let currSymbolCurrency = '';
+let convertionRate = 1;
+
+function getUsername(fullName) {
+  return fullName
+    .toLowerCase()
+    .split(' ')
+    .map(name => name[0])
+    .join('');
+}
+
+function findAccount(username, password) {
+  const account = accounts.find(
+    account => getUsername(account.owner) === username
+  );
+  if (!account || account.pin !== password) {
+    // If no account is found, display an error message
+    alert('Username or password are incorrect!');
+    return undefined;
+  }
+  return account;
+}
+
+function getCurrentDate() {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+  const year = today.getFullYear().toString(); // Get last two digits of the year
+
+  return `${day}/${month}/${year}`;
+}
+
+function getSymbolCurrency() {
+  let symbol;
+
+  if (currUser.currency.toUpperCase() === 'ILS') {
+    symbol = '₪';
+  } else if (currUser.currency.toUpperCase() === 'USD') {
+    symbol = '$';
+  } else if (currUser.currency.toUpperCase() === 'EUR') {
+    symbol = '€';
+  } else {
+    symbol = undefined;
+  }
+
+  console.log(
+    `User's currency is: ${currUser.currency.toUpperCase()} (${symbol}).`
+  );
+
+  return symbol;
+}
+
+function updateMovements(movements) {
+  movements.forEach(function (mov, i) {
+    const type = mov > 0 ? 'deposit' : 'withdraw';
+    const htmlEl = `
+    <div class="movement-row">
+      <div class="movement-type movement-type-${type}">${i + 1} ${type}</div>
+      <div class="movement-date"></div>
+      <div class="movement-amount">${mov}${currSymbolCurrency}</div>
+    </div>`;
+
+    containerMovements.insertAdjacentHTML('afterbegin', htmlEl);
+  });
+}
+
+function updateBalance(balance) {
+  //let sum = 0;
+
+  //movements.forEach(el => (sum += el));
+  currUser.balance = balance;
+  labelBalance.textContent = currUser.balance + currSymbolCurrency;
+}
+
+function changeCurrency(from, to) {
+  const url = `https://v6.exchangerate-api.com/v6/1f80d0c0f081f92b779fe3a3/pair/${from.toUpperCase()}/${to.toUpperCase()}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      console.log(
+        `Conversion rate from ${from.toUpperCase()} to ${to.toUpperCase()}:`,
+        data.conversion_rate
+      );
+      const newMovements = currUser.movements.map(
+        mov => mov * Number(data.conversion_rate)
+      );
+
+      currUser.currency = to;
+      currSymbolCurrency = getSymbolCurrency();
+      currUser.movements = newMovements;
+      console.log(`Movements after currency change: ${currUser.movements}.`);
+      containerMovements.textContent = '';
+      updateMovements(currUser.movements);
+
+      const newBalance = Number(currUser.balance) * data.conversion_rate;
+
+      console.log(
+        `Previous balance: ${currUser.balance} || New balance: ${newBalance}`
+      );
+      updateBalance(newBalance);
+    })
+    .catch(error => console.error('Error fetching data:', error));
+}
+
+function loadApp() {
+  containerApp.style.opacity = 1;
+  containerMovements.textContent = '';
+  currSymbolCurrency = getSymbolCurrency();
+  updateBalance(currUser.balance);
+  updateMovements(currUser.movements);
+  labelDate.textContent = getCurrentDate();
+  labelWelcome.textContent = `Welcome back, ${
+    currUser.owner.trim().split(' ')[0]
+  }`;
+  console.log(`Logged in successfully as ${currUser.owner}.`);
+}
+
+btnLogin.addEventListener('click', function (event) {
+  console.clear();
+  currUser = findAccount(inputUsername.value, Number(inputPassword.value));
+
+  if (currUser) {
+    event.preventDefault();
+    loadApp();
+  }
+});
+//changeCurrency(currUser.currency, 'USD');
