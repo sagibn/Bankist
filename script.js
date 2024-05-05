@@ -74,6 +74,7 @@ const currencies = new Map([
 
 let currUser = account1;
 let currSymbolCurrency = '';
+let isSorted = false;
 
 function getUsername(fullName) {
   return fullName
@@ -84,9 +85,8 @@ function getUsername(fullName) {
 }
 
 function findAccount(username, password) {
-  const account = accounts.find(
-    account => getUsername(account.owner) === username
-  );
+  const account = findUser(username);
+
   if (!account || account.pin !== password) {
     alert('Username or password are incorrect!');
     return undefined;
@@ -127,7 +127,7 @@ function getSymbolCurrency(currency) {
   return symbol;
 }
 
-function updateMovements(movements, startingIndex = 0) {
+function displayMovements(movements, startingIndex = 0) {
   movements.forEach(function (mov, i) {
     const type = mov > 0 ? 'deposit' : 'withdraw';
     const htmlEl = `
@@ -143,7 +143,7 @@ function updateMovements(movements, startingIndex = 0) {
   });
 }
 
-function updateBalance(balance) {
+function displayAndUpdateBalance(balance) {
   //let sum = 0;
 
   //movements.forEach(el => (sum += el));
@@ -169,7 +169,7 @@ function changeCurrency(from, to) {
       currSymbolCurrency = getSymbolCurrency(currUser.currency);
       currUser.movements = newMovements;
       containerMovements.textContent = '';
-      updateMovements(currUser.movements);
+      displayMovements(currUser.movements);
 
       const newBalance = Number(
         (Number(currUser.balance) * data.conversion_rate).toFixed(2)
@@ -180,7 +180,7 @@ function changeCurrency(from, to) {
           from
         )} || New balance: ${newBalance}${currSymbolCurrency}`
       );
-      updateBalance(newBalance);
+      displayAndUpdateBalance(newBalance);
     })
     .catch(error => console.error('Error fetching data:', error));
 }
@@ -203,10 +203,11 @@ async function conversionRate(from, to) {
 function loadApp() {
   containerApp.style.opacity = 1;
   containerMovements.textContent = '';
+  isSorted = false;
   currSymbolCurrency = getSymbolCurrency(currUser.currency);
-  updateBalance(currUser.balance);
-  updateMovements(currUser.movements);
-  calcVals();
+  displayAndUpdateBalance(currUser.balance);
+  displayMovements(currUser.movements);
+  displaySummary();
   labelDate.textContent = getCurrentDate();
   labelWelcome.textContent = `Welcome back, ${
     currUser.owner.trim().split(' ')[0]
@@ -217,7 +218,7 @@ function loadApp() {
 async function updateCurrencies(to) {
   await changeCurrency(currUser.currency, to);
   await delay(5000);
-  calcVals();
+  displaySummary();
   console.log(`Update currencies to ${to} completed.`);
 }
 
@@ -225,35 +226,44 @@ function delay(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-function calcVals() {
+function displaySummary() {
   console.log(currUser.movements);
   labelSumIn.textContent =
     currUser.movements
       .filter(mov => mov > 0)
-      .reduce(function (sum, curr) {
-        return sum + curr;
-      }, 0)
+      .reduce((sum, curr) => sum + curr, 0)
       .toFixed(2) + currSymbolCurrency;
 
   labelSumOut.textContent =
     Math.abs(
       currUser.movements
         .filter(mov => mov < 0)
-        .reduce(function (sum, curr) {
-          return sum + curr;
-        }, 0)
+        .reduce((sum, curr) => sum + curr, 0)
     ).toFixed(2) + currSymbolCurrency;
+
+  labelSumInterest.textContent =
+    currUser.movements
+      .filter(mov => mov > 0)
+      .map(deposit => (deposit * currUser.interestRate) / 100)
+      .reduce((sum, curr) => sum + curr, 0)
+      .toFixed(2) + currSymbolCurrency;
 }
 
 function makeTransaction(amount) {
-  updateMovements([amount], currUser.movements.length);
+  displayMovements([amount], currUser.movements.length);
   currUser.movements.push(amount);
-  updateBalance(currUser.balance + amount);
-  inputLoanAmount.value = '';
+  displayAndUpdateBalance(currUser.balance + amount);
+
   if (amount > 0) {
     labelSumIn.textContent =
       (Number(labelSumIn.textContent.slice(0, -1)) + amount).toFixed(2) +
       currSymbolCurrency;
+
+    labelSumInterest.textContent =
+      (
+        Number(labelSumInterest.textContent.slice(0, -1)) +
+        (amount * currUser.interestRate) / 100
+      ).toFixed(2) + currSymbolCurrency;
   } else {
     labelSumOut.textContent =
       (Number(labelSumOut.textContent.slice(0, -1)) - amount).toFixed(2) +
@@ -261,36 +271,23 @@ function makeTransaction(amount) {
   }
 }
 
+function hideUI() {
+  containerApp.style.opacity = 0;
+  containerMovements.textContent = '';
+  labelWelcome.textContent = `Log in to get started`;
+}
+
 btnLogin.addEventListener('click', function (event) {
   console.clear();
   currUser = findAccount(inputUsername.value, Number(inputPassword.value));
   inputUsername.value = inputPassword.value = '';
+  inputUsername.blur();
+  inputPassword.blur();
 
   if (currUser) {
     event.preventDefault();
     loadApp();
     //updateCurrencies('EUR');
-  }
-});
-
-btnLoan.addEventListener('click', async function (event) {
-  event.preventDefault();
-
-  const amountRequest = Number(inputLoanAmount.value);
-
-  if (
-    amountRequest > 0 &&
-    amountRequest >= currUser.balance * 0.1 &&
-    (amountRequest <= currUser.balance || amountRequest <= 2000)
-  ) {
-    console.log(`Request loan of ${amountRequest}${currSymbolCurrency}.`);
-    await delay(5000);
-    makeTransaction(amountRequest);
-    console.log(`Loan request completed successfully.`);
-    alert(`Loan request completed successfully.`);
-  } else {
-    alert(`Loan request must be between 10% to 100% of the total balance!`);
-    inputLoanAmount.value = '';
   }
 });
 
@@ -317,9 +314,9 @@ btnTransfer.addEventListener('click', async function (event) {
       currUser.currency,
       destUser.currency
     );
-    await delay(5000);
+    await delay(3000);
     if (conv_rate) {
-      makeTransaction(-1 * amountRequest);
+      makeTransaction(-amountRequest);
       destUser.movements.push(amountRequest * conv_rate);
       destUser.balance += amountRequest * conv_rate;
       alert(`transfer request completed successfully.`);
@@ -329,11 +326,65 @@ btnTransfer.addEventListener('click', async function (event) {
       alert(`Request failed.`);
     }
   } else {
-    alert(
-      `Unable to transfer more than total amount or the destination account is not found.`
-    );
+    alert(`Unvalid amount or the destination account is not found.`);
   }
 
   inputTransferAmount.value = '';
   inputTransferTo.value = '';
+  inputTransferAmount.blur();
+  inputTransferTo.blur();
+});
+
+btnLoan.addEventListener('click', async function (event) {
+  event.preventDefault();
+
+  const amountRequest = Number(inputLoanAmount.value);
+
+  if (
+    amountRequest > 0 &&
+    currUser.movements.some(mov => mov >= amountRequest * 0.1)
+  ) {
+    console.log(`Request loan of ${amountRequest}${currSymbolCurrency}.`);
+    await delay(3000);
+    makeTransaction(amountRequest);
+    console.log(`Loan request completed successfully.`);
+    alert(`Loan request completed successfully.`);
+  } else {
+    alert(
+      `To get the loan, the user must have a deposit of at least 10% of the requested amount!`
+    );
+  }
+
+  inputLoanAmount.value = '';
+  inputLoanAmount.blur();
+});
+
+btnClose.addEventListener('click', function (event) {
+  event.preventDefault();
+
+  const username = inputCloseUsername.value;
+  const pin = Number(inputClosePassword.value);
+
+  console.log(username, pin);
+
+  if (username === getUsername(currUser.owner) && pin === currUser.pin) {
+    accounts.splice(accounts.indexOf(currUser));
+    alert(`Account deleted successfully.`);
+    hideUI();
+  } else {
+    alert(`Wrong username or pin.`);
+  }
+
+  inputCloseUsername.value = inputClosePassword.value = '';
+  inputClosePassword.blur();
+  inputCloseUsername.blur();
+});
+
+btnSort.addEventListener('click', function (event) {
+  event.preventDefault();
+  containerMovements.textContent = '';
+  isSorted = !isSorted;
+  isSorted
+    ? displayMovements(currUser.movements.slice().sort((a, b) => a - b))
+    : displayMovements(currUser.movements);
 });
